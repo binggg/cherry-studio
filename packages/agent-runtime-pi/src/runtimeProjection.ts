@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { type AgentSession, type AgentSessionEvent } from '@earendil-works/pi-coding-agent'
 
+import { ENTRY_KINDS } from '@cherrystudio/agent-behavior'
 import {
   runtimeId,
   ThreadFeed,
@@ -46,7 +47,7 @@ export class PiProjection {
       report
     )
     this.bind(session)
-    for (const message of session.messages) this.write(message, this.id(message), 'complete')
+    for (const message of this.currentMessages()) this.write(message, this.id(message), 'complete')
   }
 
   rebind(session: AgentSession): void {
@@ -66,13 +67,23 @@ export class PiProjection {
     this.calls.clear()
     this.feed.publish({ type: 'gap', reason: 'mapping-reset' })
     this.snapshotMessages = []
-    for (const message of session.messages) this.write(message, this.id(message), 'complete')
+    for (const message of this.currentMessages()) this.write(message, this.id(message), 'complete')
     this.feed.publish({
       ...this.feed.snapshot,
       messages: this.snapshotMessages,
       activity: { scope: 'foreground', state: session.isIdle ? 'idle' : 'active' }
     })
     this.snapshotMessages = undefined
+  }
+
+  private currentMessages(): PiMessage[] {
+    const branch = this.session.sessionManager.getBranch()
+    const origin = branch.findLastIndex(
+      (entry) => entry.type === 'custom' && entry.customType === ENTRY_KINDS.subagentOrigin
+    )
+    if (origin < 0) return this.session.messages
+    const own = new Set(branch.slice(origin + 1).map((entry) => entry.id))
+    return this.session.messages.filter((message) => own.has(this.entryId(message) ?? ''))
   }
 
   private bind(session: AgentSession): void {
@@ -195,7 +206,7 @@ export class PiProjection {
       message.role !== 'user' &&
       message.role !== 'assistant' &&
       message.role !== 'system' &&
-      !(message.role === 'custom' && message.display)
+      !(message.role === 'custom' && (message.display || message.customType === ENTRY_KINDS.subagentMessage))
     )
       return
     const liveId = id
