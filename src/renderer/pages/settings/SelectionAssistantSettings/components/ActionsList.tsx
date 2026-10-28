@@ -2,18 +2,18 @@ import type { DroppableProvided } from '@hello-pangea/dnd'
 import { Draggable, Droppable } from '@hello-pangea/dnd'
 import { memo } from 'react'
 
-import type { SelectionActionItem } from '@shared/data/preference/preferenceTypes'
+import type { SelectionAction } from '@shared/types/selection'
 
 import ActionsListItemComponent from './ActionsListItem'
 
 interface ActionListProps {
   droppableId: 'enabled' | 'disabled'
-  items: SelectionActionItem[]
+  items: SelectionAction[]
   isLastEnabledItem: boolean
-  onEdit: (item: SelectionActionItem) => void
+  onEdit: (item: SelectionAction) => void
   onDelete: (id: string) => void
   getSearchEngineInfo: (engine: string) => { icon: any; name: string } | null
-  getAgentInfo: (item: SelectionActionItem) => { emoji: string; name: string } | null
+  getAgentInfo: (item: SelectionAction) => { emoji: string; name: string } | null
 }
 
 const ActionsList = memo(

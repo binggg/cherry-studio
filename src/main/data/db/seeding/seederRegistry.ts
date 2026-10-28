@@ -14,7 +14,7 @@ import { MiniAppSeeder } from './seeders/miniAppSeeder'
 import { PreferenceSeeder } from './seeders/preferenceSeeder'
 import { PresetProviderSeeder } from './seeders/presetProviderSeeder'
 import { RetiredAgentRuntimeSeeder } from './seeders/RetiredAgentRuntimeSeeder'
-import { SelectionAskAgentUpgradeSeeder } from './seeders/selectionAskAgentUpgradeSeeder'
+import { SelectionActionItemsUpgradeSeeder } from './seeders/selectionActionItemsUpgradeSeeder'
 import { SidebarShortcutMigrationSeeder } from './seeders/sidebarShortcutMigrationSeeder'
 import { TranslateLanguageSeeder } from './seeders/translateLanguageSeeder'
 import { WebSearchPreferenceUpgradeSeeder } from './seeders/WebSearchPreferenceUpgradeSeeder'
@@ -42,7 +42,7 @@ export const seeders: ISeeder[] = [
   new LongTextPastePreferenceUpgradeSeeder(),
   new WebSearchPreferenceUpgradeSeeder(),
   new SidebarShortcutMigrationSeeder(),
-  new SelectionAskAgentUpgradeSeeder(),
+  new SelectionActionItemsUpgradeSeeder(),
   new PreferenceSeeder(),
   new TranslateLanguageSeeder(),
   new LocalModelSeeder(),
