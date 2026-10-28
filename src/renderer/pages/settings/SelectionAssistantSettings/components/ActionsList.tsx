@@ -13,10 +13,11 @@ interface ActionListProps {
   onEdit: (item: SelectionActionItem) => void
   onDelete: (id: string) => void
   getSearchEngineInfo: (engine: string) => { icon: any; name: string } | null
+  getAgentInfo: (item: SelectionActionItem) => { emoji: string; name: string } | null
 }
 
 const ActionsList = memo(
-  ({ droppableId, items, isLastEnabledItem, onEdit, onDelete, getSearchEngineInfo }: ActionListProps) => {
+  ({ droppableId, items, isLastEnabledItem, onEdit, onDelete, getSearchEngineInfo, getAgentInfo }: ActionListProps) => {
     return (
       <Droppable droppableId={droppableId}>
         {(provided: DroppableProvided) => (
@@ -33,6 +34,7 @@ const ActionsList = memo(
                       onEdit={onEdit}
                       onDelete={onDelete}
                       getSearchEngineInfo={getSearchEngineInfo}
+                      getAgentInfo={getAgentInfo}
                     />
                   )}
                 </Draggable>

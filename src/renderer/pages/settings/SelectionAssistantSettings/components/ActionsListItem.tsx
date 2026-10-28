@@ -17,12 +17,23 @@ interface ActionItemProps {
   onEdit: (item: SelectionActionItem) => void
   onDelete: (id: string) => void
   getSearchEngineInfo: (engine: string) => { icon: any; name: string } | null
+  getAgentInfo: (item: SelectionActionItem) => { emoji: string; name: string } | null
 }
 
 const ActionsListItem = memo(
-  ({ item, provided, listType, isLastEnabledItem, onEdit, onDelete, getSearchEngineInfo }: ActionItemProps) => {
+  ({
+    item,
+    provided,
+    listType,
+    isLastEnabledItem,
+    onEdit,
+    onDelete,
+    getSearchEngineInfo,
+    getAgentInfo
+  }: ActionItemProps) => {
     const { t } = useTranslation()
     const isEnabled = listType === 'enabled'
+    const agentInfo = getAgentInfo(item)
 
     return (
       <Item
@@ -40,6 +51,12 @@ const ActionsListItem = memo(
             <ItemDescription>
               {getSearchEngineInfo(item.searchEngine)?.icon}
               <span>{getSearchEngineInfo(item.searchEngine)?.name}</span>
+            </ItemDescription>
+          )}
+          {agentInfo && (
+            <ItemDescription>
+              <span aria-hidden="true">{agentInfo.emoji}</span>
+              <span className="truncate">{agentInfo.name}</span>
             </ItemDescription>
           )}
         </ItemLeft>
@@ -70,7 +87,7 @@ const ActionOperations = memo(({ item, onEdit, onDelete }: ActionOperationsProps
     )
   }
 
-  if (item.isBuiltIn && item.id === 'search') {
+  if (item.isBuiltIn && (item.id === 'search' || item.id === 'ask-agent')) {
     return (
       <UserActionOpSection>
         <Button variant="ghost" size="icon-sm" onClick={() => onEdit(item)}>

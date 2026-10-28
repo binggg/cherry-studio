@@ -3,7 +3,10 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { loggerService } from '@logger'
+import { useAgents } from '@renderer/hooks/agent/useAgent'
 import { popup } from '@renderer/services/popup'
+import { getAgentAvatarFromConfiguration } from '@renderer/utils/agent'
+import { BUILTIN_AGENT_ROLE } from '@shared/ai/builtinAgent'
 import { DefaultPreferences } from '@shared/data/preference/preferenceSchemas'
 import type { SelectionActionItem } from '@shared/data/preference/preferenceTypes'
 
@@ -21,7 +24,9 @@ export const useActionItems = (
   const { t } = useTranslation()
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
+  const [isAskAgentModalOpen, setIsAskAgentModalOpen] = useState(false)
   const [userEditingAction, setUserEditingAction] = useState<SelectionActionItem | null>(null)
+  const { agents } = useAgents()
 
   const enabledItems = useMemo(() => initialItems?.filter((item) => item.enabled) ?? [], [initialItems])
   const disabledItems = useMemo(() => initialItems?.filter((item) => !item.enabled) ?? [], [initialItems])
@@ -31,6 +36,10 @@ export const useActionItems = (
     if (item.isBuiltIn) {
       if (item.id === 'search') {
         setIsSearchModalOpen(true)
+        return
+      }
+      if (item.id === 'ask-agent') {
+        setIsAskAgentModalOpen(true)
         return
       }
       return
@@ -65,6 +74,12 @@ export const useActionItems = (
     const updatedItems = initialItems.map((item) => (item.id === 'search' ? { ...item, searchEngine } : item))
     setActionItems(updatedItems)
     setIsSearchModalOpen(false)
+  }
+
+  const handleAskAgentModalOk = (binding: Pick<SelectionActionItem, 'agentId' | 'agentWorkspace'>) => {
+    if (!initialItems) return
+    setActionItems(initialItems.map((item) => (item.id === 'ask-agent' ? { ...item, ...binding } : item)))
+    setIsAskAgentModalOpen(false)
   }
 
   const handleDeleteActionItem = async (id: string) => {
@@ -159,24 +174,38 @@ export const useActionItems = (
     return { icon: customEngine?.icon, name: engine }
   }
 
+  const getAgentInfo = (item: SelectionActionItem) => {
+    const agent = item.agentId
+      ? agents.find((candidate) => candidate.id === item.agentId)
+      : item.id === 'ask-agent'
+        ? agents.find((candidate) => candidate.configuration?.builtin_role === BUILTIN_AGENT_ROLE.ASSISTANT)
+        : undefined
+    if (!agent) return null
+    return { emoji: getAgentAvatarFromConfiguration(agent.configuration), name: agent.name }
+  }
+
   return {
     enabledItems,
     disabledItems,
     customItemsCount,
     isUserModalOpen,
     isSearchModalOpen,
+    isAskAgentModalOpen,
     userEditingAction,
     setIsUserModalOpen,
     setIsSearchModalOpen,
+    setIsAskAgentModalOpen,
     setUserEditingAction,
     handleEditActionItem,
     handleAddNewAction,
     handleUserModalOk,
     handleSearchModalOk,
+    handleAskAgentModalOk,
     handleDeleteActionItem,
     handleReset,
     onDragEnd,
     getSearchEngineInfo,
+    getAgentInfo,
     MAX_CUSTOM_ITEMS,
     MAX_ENABLED_ITEMS
   }
