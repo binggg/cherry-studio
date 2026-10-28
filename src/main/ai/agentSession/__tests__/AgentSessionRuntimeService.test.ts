@@ -961,13 +961,11 @@ describe('AgentSessionRuntimeService', () => {
         model: { id: 'claude-sonnet-4-5', name: 'Claude Sonnet', provider: 'claude-code' }
       }
     })
-    const reader = service
-      .openTurnStream({
-        sessionId: 'session-1',
-        turnId: handle.turnId,
-        signal: new AbortController().signal
-      })
-      .getReader()
+    const reader = openChunkStream(service, {
+      sessionId: 'session-1',
+      turnId: handle.turnId,
+      signal: new AbortController().signal
+    }).getReader()
     await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
     await vi.waitFor(() => expect(connection.send).toHaveBeenCalled())
 
@@ -1167,7 +1165,7 @@ describe('AgentSessionRuntimeService', () => {
       const turn = service.beginTurn(baseTurnInput)
       expect(service.getInteractionState('session-1').userResponse).not.toBe('stream')
 
-      service.openTurnStream({
+      openChunkStream(service, {
         sessionId: 'session-1',
         turnId: turn.turnId,
         signal: new AbortController().signal
@@ -1181,7 +1179,7 @@ describe('AgentSessionRuntimeService', () => {
     it('stays true mid-roll, when chunks are buffered for the continuation turn', () => {
       const service = new AgentSessionRuntimeService()
       const turn = service.beginTurn(baseTurnInput)
-      service.openTurnStream({
+      openChunkStream(service, {
         sessionId: 'session-1',
         turnId: turn.turnId,
         signal: new AbortController().signal
@@ -1753,7 +1751,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const first = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const firstStream = service.openTurnStream({
+    const firstStream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: first.turnId,
       signal: new AbortController().signal
@@ -1775,7 +1773,7 @@ describe('AgentSessionRuntimeService', () => {
       assistantMessageId: 'assistant-2',
       userMessage: userMessage('user-2')
     })
-    const secondStream = service.openTurnStream({
+    const secondStream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: second.turnId,
       signal: new AbortController().signal
@@ -1875,7 +1873,7 @@ describe('AgentSessionRuntimeService', () => {
       { id: 'agent-1', model: switchedModelId }
     )
 
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -1963,7 +1961,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -2316,7 +2314,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -2459,7 +2457,7 @@ describe('AgentSessionRuntimeService', () => {
       service.markTurnTerminal('session-1', 'success')
 
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-2') })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -2516,7 +2514,7 @@ describe('AgentSessionRuntimeService', () => {
         modelId: switchedModelId,
         userMessage: userMessage('user-2')
       })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -3100,13 +3098,11 @@ describe('AgentSessionRuntimeService', () => {
       await vi.waitFor(() => expect(mocks.startRuntimeTurn).toHaveBeenCalledTimes(1))
 
       const receiveOnlyTurn = entry.currentTurn
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: receiveOnlyTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: receiveOnlyTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       expect(entry.runtimeState.execution).toMatchObject({
         kind: 'autonomous-turn',
@@ -3207,13 +3203,11 @@ describe('AgentSessionRuntimeService', () => {
         await vi.waitFor(() => expect(mocks.startRuntimeTurn).toHaveBeenCalledTimes(1))
         const receiveOnlyTurn = entry.currentTurn
         expect(receiveOnlyTurn).not.toBe(hostTurn)
-        const reader = service
-          .openTurnStream({
-            sessionId: 'session-1',
-            turnId: receiveOnlyTurn.turnId,
-            signal: new AbortController().signal
-          })
-          .getReader()
+        const reader = openChunkStream(service, {
+          sessionId: 'session-1',
+          turnId: receiveOnlyTurn.turnId,
+          signal: new AbortController().signal
+        }).getReader()
         await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
 
         ;(service as any).handleRuntimeEvent(entry, { type: 'autonomous-turn-state', state: 'finished' })
@@ -3235,9 +3229,11 @@ describe('AgentSessionRuntimeService', () => {
           buffer: [{ type: 'text-delta', id: 'reply', delta: '我很好' }]
         })
         if (finished === 'before-reopen') (service as any).handleRuntimeEvent(entry, { type: 'turn-complete' })
-        const hostReader = service
-          .openTurnStream({ sessionId: 'session-1', turnId: hostTurn.turnId, signal: new AbortController().signal })
-          .getReader()
+        const hostReader = openChunkStream(service, {
+          sessionId: 'session-1',
+          turnId: hostTurn.turnId,
+          signal: new AbortController().signal
+        }).getReader()
         await expect(hostReader.read()).resolves.toMatchObject({ value: { type: 'start' } })
         await expect(hostReader.read()).resolves.toMatchObject({ value: { type: 'text-delta', delta: '我很好' } })
         if (finished === 'after-reopen') (service as any).handleRuntimeEvent(entry, { type: 'turn-complete' })
@@ -3285,13 +3281,11 @@ describe('AgentSessionRuntimeService', () => {
         }
       })
       expect(decisions).toEqual([])
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: handle.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: handle.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' } })
       await expect(reader.read()).resolves.toMatchObject({
         value: { type: 'tool-input-available', toolCallId: 'deferred-call' }
@@ -3389,9 +3383,11 @@ describe('AgentSessionRuntimeService', () => {
         mocks.startRuntimeTurn.mock.invocationCallOrder[0]
       )
 
-      const reader = service
-        .openTurnStream({ sessionId: 'session-1', turnId: wakeTurn.turnId, signal: new AbortController().signal })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: wakeTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'text-delta', delta: 'woke' }, done: false })
       // Receive-only: the generation is the SDK's own, so nothing goes to the CLI.
@@ -3459,13 +3455,11 @@ describe('AgentSessionRuntimeService', () => {
       await vi.waitFor(() => expect(mocks.startRuntimeTurn).toHaveBeenCalledTimes(1))
 
       const receiveOnlyTurn = entry.currentTurn
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: receiveOnlyTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: receiveOnlyTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await expect(reader.read()).resolves.toMatchObject({
         value: { type: 'text-delta', delta: 'finished before projection' },
@@ -3584,13 +3578,11 @@ describe('AgentSessionRuntimeService', () => {
         terminal: { status: 'success' }
       })
 
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: receiveOnlyTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: receiveOnlyTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await expect(reader.read()).resolves.toMatchObject({ done: true })
       expect(entry.runtimeState.execution).toMatchObject({ kind: 'autonomous-turn', stream: 'awaiting-persistence' })
@@ -3653,13 +3645,11 @@ describe('AgentSessionRuntimeService', () => {
         terminal: { status: 'error', error: runtimeError }
       })
 
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: receiveOnlyTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: receiveOnlyTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader.read()).rejects.toBe(runtimeError)
       expect(entry.runtimeState.execution).toMatchObject({ kind: 'autonomous-turn', stream: 'awaiting-persistence' })
       expect(receiveOnlyTurn.controller).toBeUndefined()
@@ -3700,13 +3690,11 @@ describe('AgentSessionRuntimeService', () => {
       }
       entry.connection = connection
 
-      const originalReader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: handle.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const originalReader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: handle.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(originalReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await vi.waitFor(() => expect(connection.reconcile).toHaveBeenCalledTimes(1))
 
@@ -3727,13 +3715,11 @@ describe('AgentSessionRuntimeService', () => {
       const wakeTurn = entry.currentTurn
       expect(entry.runtimeState.execution).toMatchObject({ kind: 'autonomous-turn', turn: wakeTurn })
 
-      const wakeReader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: wakeTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const wakeReader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: wakeTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(wakeReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await expect(wakeReader.read()).resolves.toMatchObject({
         value: { type: 'text-delta', delta: 'background finished' },
@@ -3748,13 +3734,11 @@ describe('AgentSessionRuntimeService', () => {
 
       const deferredTurn = entry.currentTurn
       expect(deferredTurn.turnId).toBe(handle.turnId)
-      const resumedReader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: deferredTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const resumedReader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: deferredTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(resumedReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       expect(send).not.toHaveBeenCalled()
 
@@ -3796,13 +3780,11 @@ describe('AgentSessionRuntimeService', () => {
 
       ;(service as any).handleRuntimeEvent(entry, { type: 'autonomous-turn-state', state: 'finished' })
       ;(service as any).handleRuntimeEvent(entry, { type: 'turn-complete' })
-      const receiveOnlyReader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: receiveOnlyTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const receiveOnlyReader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: receiveOnlyTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(receiveOnlyReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await expect(receiveOnlyReader.read()).resolves.toMatchObject({ done: true })
 
@@ -4373,7 +4355,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -4430,7 +4412,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -4612,7 +4594,7 @@ describe('AgentSessionRuntimeService', () => {
       expect(getContextUsage).not.toHaveBeenCalled()
 
       const turn = service.beginTurn({ ...baseTurnInput, traceId: 'b'.repeat(32), userMessage: userMessage('user-1') })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: turn.turnId,
         signal: new AbortController().signal
@@ -4913,7 +4895,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -4980,7 +4962,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -5025,7 +5007,7 @@ describe('AgentSessionRuntimeService', () => {
       userMessage: userMessage('user-1'),
       traceId: 'a'.repeat(32)
     })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -5087,13 +5069,11 @@ describe('AgentSessionRuntimeService', () => {
     const service = new AgentSessionRuntimeService()
     const firstMessage = userMessage('first-user')
     const first = service.beginTurn({ ...baseTurnInput, agentType, userMessage: firstMessage })
-    const reader = service
-      .openTurnStream({
-        sessionId: 'session-1',
-        turnId: first.turnId,
-        signal: new AbortController().signal
-      })
-      .getReader()
+    const reader = openChunkStream(service, {
+      sessionId: 'session-1',
+      turnId: first.turnId,
+      signal: new AbortController().signal
+    }).getReader()
     await reader.read()
     await vi.waitFor(() => expect(connection.send).toHaveBeenCalledOnce())
     expect(connect).toHaveBeenCalledWith(expect.objectContaining({ resumeToken: 'native-child-token' }))
@@ -5109,13 +5089,11 @@ describe('AgentSessionRuntimeService', () => {
       assistantMessageId: 'assistant-2',
       userMessage: secondMessage
     })
-    const secondReader = service
-      .openTurnStream({
-        sessionId: 'session-1',
-        turnId: second.turnId,
-        signal: new AbortController().signal
-      })
-      .getReader()
+    const secondReader = openChunkStream(service, {
+      sessionId: 'session-1',
+      turnId: second.turnId,
+      signal: new AbortController().signal
+    }).getReader()
     await secondReader.read()
     await vi.waitFor(() => expect(connection.send).toHaveBeenCalledTimes(2))
     expect(connection.send.mock.calls[1][0].message).toEqual(secondMessage)
@@ -5141,7 +5119,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -5208,13 +5186,11 @@ describe('AgentSessionRuntimeService', () => {
         listAvailableTools: async () => []
       })
       const next = service.beginTurn({ ...baseTurnInput, assistantMessageId: 'branch-b' })
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: next.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: next.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await reader.read()
       closing.resolve()
       await Promise.all([closeA, closeB])
@@ -5249,9 +5225,11 @@ describe('AgentSessionRuntimeService', () => {
     const service = new AgentSessionRuntimeService()
     const first = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
     const firstAbort = new AbortController()
-    const firstReader = service
-      .openTurnStream({ sessionId: 'session-1', turnId: first.turnId, signal: firstAbort.signal })
-      .getReader()
+    const firstReader = openChunkStream(service, {
+      sessionId: 'session-1',
+      turnId: first.turnId,
+      signal: firstAbort.signal
+    }).getReader()
 
     await expect(firstReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
     await vi.waitFor(() => expect(firstConnection.send).toHaveBeenCalledOnce())
@@ -5266,9 +5244,11 @@ describe('AgentSessionRuntimeService', () => {
       assistantMessageId: 'assistant-2',
       userMessage: userMessage('user-2')
     })
-    const secondReader = service
-      .openTurnStream({ sessionId: 'session-1', turnId: second.turnId, signal: new AbortController().signal })
-      .getReader()
+    const secondReader = openChunkStream(service, {
+      sessionId: 'session-1',
+      turnId: second.turnId,
+      signal: new AbortController().signal
+    }).getReader()
 
     await expect(secondReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -5304,7 +5284,7 @@ describe('AgentSessionRuntimeService', () => {
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
     const controller = new AbortController()
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: controller.signal
@@ -5347,7 +5327,7 @@ describe('AgentSessionRuntimeService', () => {
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
     const controller = new AbortController()
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: controller.signal
@@ -5365,13 +5345,11 @@ describe('AgentSessionRuntimeService', () => {
       assistantMessageId: 'assistant-2',
       userMessage: userMessage('user-2')
     })
-    const retryReader = service
-      .openTurnStream({
-        sessionId: 'session-1',
-        turnId: retry.turnId,
-        signal: new AbortController().signal
-      })
-      .getReader()
+    const retryReader = openChunkStream(service, {
+      sessionId: 'session-1',
+      turnId: retry.turnId,
+      signal: new AbortController().signal
+    }).getReader()
 
     await expect(retryReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -5412,7 +5390,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5437,7 +5415,7 @@ describe('AgentSessionRuntimeService', () => {
       void terminalListener(handle).onDone({ status: 'success', isTopicDone: true })
       await vi.waitFor(() => expect(getEntry(service).currentTurn?.userMessage.id).toBe('user-2'))
       const nextTurnId = getEntry(service).currentTurn.turnId
-      const stream2 = service.openTurnStream({
+      const stream2 = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: nextTurnId,
         signal: new AbortController().signal
@@ -5527,7 +5505,7 @@ describe('AgentSessionRuntimeService', () => {
       const service = new AgentSessionRuntimeService()
       const firstMessage = userMessage('user-1', ['kb-1'])
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: firstMessage })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5582,7 +5560,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1', ['kb-1']) })
-      const firstStream = service.openTurnStream({
+      const firstStream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5595,7 +5573,7 @@ describe('AgentSessionRuntimeService', () => {
       void terminalListener(handle).onDone({ status: 'success', isTopicDone: true })
       await vi.waitFor(() => expect(getEntry(service).currentTurn?.userMessage.id).toBe('user-2'))
 
-      const secondStream = service.openTurnStream({
+      const secondStream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: getEntry(service).currentTurn.turnId,
         signal: new AbortController().signal
@@ -5628,7 +5606,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1', ['kb-1', 'kb-2']) })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5667,7 +5645,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1', ['kb-1']) })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5680,13 +5658,11 @@ describe('AgentSessionRuntimeService', () => {
       void terminalListener(handle).onDone({ status: 'success', isTopicDone: true })
       await vi.waitFor(() => expect(getEntry(service).currentTurn?.userMessage.id).toBe('user-2'))
 
-      const secondReader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: getEntry(service).currentTurn.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const secondReader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: getEntry(service).currentTurn.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(secondReader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await vi.waitFor(() => expect(connection.send).toHaveBeenCalledTimes(2))
 
@@ -5718,7 +5694,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1', ['kb-1']) })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5749,7 +5725,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5783,7 +5759,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1', ['kb-1']) })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5839,7 +5815,7 @@ describe('AgentSessionRuntimeService', () => {
           model: { id: 'claude-sonnet-4-5', name: 'Claude Sonnet', provider: 'claude-code' }
         }
       })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -5939,13 +5915,11 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: handle.turnId,
-          signal: new AbortController().signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: handle.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await vi.waitFor(() => expect(connection.send).toHaveBeenCalledOnce())
 
@@ -5999,7 +5973,7 @@ describe('AgentSessionRuntimeService', () => {
       })
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-      const stream = service.openTurnStream({
+      const stream = openChunkStream(service, {
         sessionId: 'session-1',
         turnId: handle.turnId,
         signal: new AbortController().signal
@@ -6065,9 +6039,11 @@ describe('AgentSessionRuntimeService', () => {
       expect(mocks.startRuntimeTurn).toHaveBeenCalledTimes(1)
 
       // Opening A2's stream replays the buffered post-steer chunk in order, then routes live chunks.
-      const reader2 = service
-        .openTurnStream({ sessionId: 'session-1', turnId: a2.turnId, signal: new AbortController().signal })
-        .getReader()
+      const reader2 = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: a2.turnId,
+        signal: new AbortController().signal
+      }).getReader()
       await expect(reader2.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await expect(reader2.read()).resolves.toMatchObject({ value: { type: 'text-delta', delta: 'post' }, done: false })
       expect(getEntry(service).runtimeState.execution.kind).toBe('turn')
@@ -6115,7 +6091,7 @@ describe('AgentSessionRuntimeService', () => {
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
     // Mark this turn as a steer drain, as `startNextTurn` does from `pendingTurn.steer`.
     getEntry(service).currentTurn.systemReminder = true
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -6141,7 +6117,7 @@ describe('AgentSessionRuntimeService', () => {
     })
     const service = new AgentSessionRuntimeService()
     const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
-    const stream = service.openTurnStream({
+    const stream = openChunkStream(service, {
       sessionId: 'session-1',
       turnId: handle.turnId,
       signal: new AbortController().signal
@@ -6186,13 +6162,11 @@ describe('AgentSessionRuntimeService', () => {
       const service = new AgentSessionRuntimeService()
       const handle = service.beginTurn({ ...baseTurnInput, userMessage: userMessage('user-1') })
       const controller = new AbortController()
-      const reader = service
-        .openTurnStream({
-          sessionId: 'session-1',
-          turnId: handle.turnId,
-          signal: controller.signal
-        })
-        .getReader()
+      const reader = openChunkStream(service, {
+        sessionId: 'session-1',
+        turnId: handle.turnId,
+        signal: controller.signal
+      }).getReader()
       await expect(reader.read()).resolves.toMatchObject({ value: { type: 'start' }, done: false })
       await vi.waitFor(() => expect(getEntry(service).connection).toBe(connection))
       if (action === 'stop') {
@@ -6690,3 +6664,12 @@ describe('AgentSessionRuntimeService', () => {
     })
   })
 })
+
+function openChunkStream(
+  service: InstanceType<typeof AgentSessionRuntimeService>,
+  input: Parameters<InstanceType<typeof AgentSessionRuntimeService>['openTurnStream']>[0]
+) {
+  const source = service.openTurnStream(input)
+  if (source.kind !== 'chunks') throw new Error('Expected chunk fixture')
+  return source.stream
+}
