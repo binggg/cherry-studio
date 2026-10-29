@@ -24,6 +24,7 @@ import { ensureRetiredSessionHistory, migrateRetiredSessionHistories } from './r
 
 export class PiRuntimeDriver implements AgentSessionRuntimeDriver {
   readonly type = 'pi'
+  readonly messageSource = 'projection' as const
   readonly capabilities = ['agent-session'] as const
   readonly fork = forkPiSession
   readonly recoverSessions = migrateRetiredSessionHistories
