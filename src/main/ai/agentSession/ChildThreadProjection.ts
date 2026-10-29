@@ -33,7 +33,6 @@ export function savedChildView(context: AgentSessionContextRow): AgentChildView 
     revision: 0,
     active: false,
     available: false,
-    canSubmit: false,
     diagnostic: typeof context.checkpointMapping?.gap === 'string' ? context.checkpointMapping.gap : undefined,
     messages: compose(
       readAgentSessionPath(application.get('DbService').getDb(), context.sessionId).map((row) => ({
@@ -172,7 +171,7 @@ export class ChildThreadProjection {
       this.timer = undefined
       void this.flush().catch((error) => {
         logger.error('Child archive flush failed', { contextId: this.context.id, error })
-        this.publish({ ...this.view, diagnostic: String(error), available: false, canSubmit: false })
+        this.publish({ ...this.view, diagnostic: String(error), available: false })
       })
     }, 80)
     this.timer.unref()
@@ -346,7 +345,6 @@ export class ChildThreadProjection {
       messages: compose([...next.values()], this.composition),
       active: current.activity.state === 'active',
       available: !this.stopped && !current.closed,
-      canSubmit: !this.stopped && !current.closed && !!this.handle.input,
       diagnostic: current.diagnostic?.message ?? this.archiveGap ?? current.gap
     })
   }
@@ -418,7 +416,7 @@ export class ChildThreadProjection {
     await this.observation?.stop()
     await this.flush()
     await this.projection.close()
-    this.publish({ ...this.view, available: false, canSubmit: false, active: false })
+    this.publish({ ...this.view, available: false, active: false })
     this.delivery.dispose()
   }
 
