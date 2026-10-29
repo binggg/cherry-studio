@@ -12,6 +12,7 @@ import { getSidebarLayout, UserAvatar } from '@renderer/components/Sidebar'
 import { useAppUpdateState } from '@renderer/hooks/useAppUpdateState'
 import useAvatar from '@renderer/hooks/useAvatar'
 
+import { NotificationCenterButton } from '../NotificationCenter'
 import { UserAccountPanel } from '../UserAccountPanel'
 import { WindowControls } from '../WindowControls'
 import { HelpMenu } from './HelpMenu'
@@ -128,7 +129,12 @@ export function ShellTabBarActions() {
             <Search size={16} strokeWidth={1.8} />
           </Button>
         </CommandTooltip>
-        {isSidebarHidden ? <TabBarUserMenu onFeedbackClick={handleOpenFeedback} /> : null}
+        {isSidebarHidden ? (
+          <>
+            <NotificationCenterButton />
+            <TabBarUserMenu onFeedbackClick={handleOpenFeedback} />
+          </>
+        ) : null}
       </div>
 
       <WindowControls />

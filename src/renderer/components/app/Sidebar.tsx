@@ -28,6 +28,7 @@ import { getAppEdition } from '@renderer/utils/appEdition'
 
 import { HelpMenu } from '../layout/HelpMenu'
 import { AppUpdateButton } from '../layout/ShellTabBarActions'
+import { NotificationCenterButton } from '../NotificationCenter'
 import {
   getSidebarDisplayWidth,
   getSidebarLayout,
@@ -87,7 +88,11 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
 
   useLayoutEffect(() => {
     document.documentElement.style.setProperty('--sidebar-width', `${getSidebarDisplayWidth(activeSidebarWidth)}px`)
-  }, [activeSidebarWidth])
+    document.documentElement.style.setProperty(
+      '--notification-left',
+      layout === 'hidden' ? '0px' : `${getSidebarDisplayWidth(activeSidebarWidth)}px`
+    )
+  }, [activeSidebarWidth, layout])
 
   useEffect(() => {
     if (previewSidebarWidth !== null) return
@@ -247,6 +252,7 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
     entries,
     emptyHint: t('sidebar.empty_hint', { launchpad: t('title.launchpad') }),
     user: sidebarUser,
+    actions: layout !== 'hidden' ? <NotificationCenterButton className={layout === 'full' ? 'ml-1' : ''} /> : null,
     userAction: layout === 'full' ? <AppUpdateButton placement="top" /> : null,
     renderUserTrigger: renderSidebarUserTrigger,
     onEntriesReorder: handleReorder

@@ -61,6 +61,10 @@ vi.mock('@renderer/components/command', () => ({
   CommandShortcut: () => null
 }))
 
+vi.mock('@renderer/components/NotificationCenter', () => ({
+  NotificationCenterButton: () => <button type="button" aria-label="Notification center" />
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) =>
@@ -92,6 +96,10 @@ afterEach(() => {
 })
 
 describe('ShellTabBarActions', () => {
+  it('does not duplicate the notification bell while the sidebar is visible', () => {
+    render(<ShellTabBarActions />)
+    expect(screen.queryByRole('button', { name: 'Notification center' })).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     MockUsePreferenceUtils.setPreferenceValue('app.user.name', 'User')
     Object.defineProperty(window, 'toast', {
@@ -158,6 +166,7 @@ describe('ShellTabBarActions', () => {
     expect(screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
       'Found new version',
       'Open global search',
+      'Notification center',
       'Account menu'
     ])
   })
