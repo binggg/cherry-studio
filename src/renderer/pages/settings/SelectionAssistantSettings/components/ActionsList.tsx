@@ -4,6 +4,7 @@ import { memo } from 'react'
 
 import type { SelectionAction } from '@shared/types/selection'
 
+import type { SelectionActionAgentInfo } from '../hooks/useSettingsActionsList'
 import ActionsListItemComponent from './ActionsListItem'
 
 interface ActionListProps {
@@ -13,7 +14,7 @@ interface ActionListProps {
   onEdit: (item: SelectionAction) => void
   onDelete: (id: string) => void
   getSearchEngineInfo: (engine: string) => { icon: any; name: string } | null
-  getAgentInfo: (item: SelectionAction) => { emoji: string; name: string } | null
+  getAgentInfo: (item: SelectionAction) => SelectionActionAgentInfo | null
 }
 
 const ActionsList = memo(
