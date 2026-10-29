@@ -307,10 +307,14 @@ const HomePage: FC = () => {
     }
   }, [allTopics, isClassicTopicLayout, topicListPosition, t, visibleAssistantId])
   const targetTopicId = activeTopicId ?? undefined
-  const { locateMessageId, requestLocate, clearLocate } = useConversationLocateRequest({
+  const { locateMessageId, locateToEnd, requestLocate, clearLocate } = useConversationLocateRequest({
+    navigationTabId: currentTabId ?? undefined,
     activeConversationId: targetTopicId,
     visibleConversationId: visibleTopic?.id
   })
+  useEffect(() => {
+    if (locateMessageId || locateToEnd) closeSurface()
+  }, [closeSurface, locateMessageId, locateToEnd])
 
   useEffect(() => {
     if (activeTopic) lastVisibleTopicRef.current = activeTopic
@@ -740,6 +744,7 @@ const HomePage: FC = () => {
             sidebarOpen={shellPaneOpen}
             onSidebarToggle={toggleShellPane}
             locateMessageId={locateMessageId}
+            locateToEnd={locateToEnd}
             onLocateMessageHandled={handleLocateMessageHandled}
             resourcePaneCount={topicResourcePaneCount}
           />

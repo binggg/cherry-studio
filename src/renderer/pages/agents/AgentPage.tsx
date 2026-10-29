@@ -389,10 +389,14 @@ const AgentPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `useEffectEvent` reads the latest session without resubscribing.
   }, [currentTabId])
   const targetSessionId = activeSessionId ?? undefined
-  const { locateMessageId, requestLocate, clearLocate } = useConversationLocateRequest({
+  const { locateMessageId, locateToEnd, requestLocate, clearLocate } = useConversationLocateRequest({
+    navigationTabId: currentTabId ?? undefined,
     activeConversationId: targetSessionId,
     visibleConversationId: visibleSession?.id
   })
+  useEffect(() => {
+    if (locateMessageId || locateToEnd) closeSurface()
+  }, [closeSurface, locateMessageId, locateToEnd])
 
   const [sessionPaneUserOpenIntentSeq, setSessionPaneUserOpenIntentSeq] = useState(0)
 
@@ -1153,6 +1157,7 @@ const AgentPage = () => {
             onVisibleAgentChange={setLastUsedAgentId}
             onVisibleWorkspaceChange={setLastUsedWorkspaceId}
             locateMessageId={locateMessageId}
+            locateToEnd={locateToEnd}
             onLocateMessageHandled={handleLocateMessageHandled}
             selectingMissingAgent={selectingMissingAgent}
             replacingSessionWorkspace={replacingSessionWorkspace}
